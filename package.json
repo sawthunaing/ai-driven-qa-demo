@@ -1,0 +1,30 @@
+{
+  "name": "ai-qa-mvp",
+  "version": "1.0.0",
+  "description": "AI-driven QA automation MVP for a Calculator API. Demonstrates LLM-based test generation, execution, and failure analysis.",
+  "main": "calculator-api.js",
+  "scripts": {
+    "start": "node calculator-api.js",
+    "generate": "node scripts/generate-tests.js",
+    "test": "node scripts/run-tests.js",
+    "analyze": "node scripts/analyze-failures.js",
+    "report": "node scripts/generate-report.js",
+    "qa": "npm run generate && npm run test && npm run analyze && npm run report"
+  },
+  "keywords": [
+    "qa",
+    "ai",
+    "testing",
+    "automation",
+    "anthropic",
+    "claude"
+  ],
+  "author": "Saw Thu Naing",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.30.0",
+    "axios": "^1.7.0",
+    "express": "^4.21.0",
+    "js-yaml": "^4.1.0"
+  }
+}

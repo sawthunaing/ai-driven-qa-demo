@@ -1,0 +1,67 @@
+openapi: 3.0.0
+info:
+  title: Calculator API
+  version: 1.0.0
+  description: Simple arithmetic calculator API used to demonstrate AI-driven QA testing
+servers:
+  - url: http://localhost:3000
+paths:
+  /api/v1/calculate:
+    post:
+      summary: Perform an arithmetic calculation
+      description: Accepts two numbers and an operation, returns the result.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - a
+                - b
+                - operation
+              properties:
+                a:
+                  type: number
+                  description: First operand
+                b:
+                  type: number
+                  description: Second operand
+                operation:
+                  type: string
+                  enum: [add, subtract, multiply, divide]
+                  description: Arithmetic operation to perform
+      responses:
+        '200':
+          description: Calculation successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: number
+                  operation:
+                    type: string
+                  inputs:
+                    type: object
+                    properties:
+                      a:
+                        type: number
+                      b:
+                        type: number
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+  /health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: Service is healthy

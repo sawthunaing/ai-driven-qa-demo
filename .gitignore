@@ -1,0 +1,14 @@
+node_modules/
+.env
+*.log
+api.pid
+
+# Generated artifacts (regenerated on every run, no point committing)
+generated-tests.json
+test-results.json
+failure-analysis.md
+report.html
+
+# OS
+.DS_Store
+Thumbs.db

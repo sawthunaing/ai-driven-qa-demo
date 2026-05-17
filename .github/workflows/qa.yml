@@ -1,0 +1,114 @@
+name: AI-Driven QA Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  ai-qa:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Start Calculator API
+        run: |
+          node calculator-api.js &
+          echo $! > api.pid
+          sleep 3
+
+      - name: Verify API health
+        run: |
+          curl -f http://localhost:3000/health || exit 1
+
+      - name: Generate tests with AI
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: node scripts/generate-tests.js
+
+      - name: Run tests
+        id: run-tests
+        run: node scripts/run-tests.js
+        continue-on-error: true
+
+      - name: Analyze failures with AI
+        if: steps.run-tests.outcome == 'failure'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: node scripts/analyze-failures.js
+
+      - name: Generate HTML report
+        if: always()
+        run: node scripts/generate-report.js
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-results
+          path: |
+            generated-tests.json
+            test-results.json
+            failure-analysis.md
+            report.html
+          retention-days: 30
+
+      - name: Comment on PR with results
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            try {
+              const results = JSON.parse(fs.readFileSync('test-results.json', 'utf8'));
+              const passed = results.filter(r => r.status === 'PASS').length;
+              const failed = results.filter(r => r.status === 'FAIL').length;
+              const errors = results.filter(r => r.status === 'ERROR').length;
+              const total = results.length;
+              const passRate = ((passed / total) * 100).toFixed(1);
+              
+              let analysis = '';
+              if (fs.existsSync('failure-analysis.md')) {
+                const md = fs.readFileSync('failure-analysis.md', 'utf8');
+                analysis = `\n\n<details><summary>🤖 AI Failure Analysis</summary>\n\n${md}\n\n</details>`;
+              }
+              
+              const body = `## 🤖 AI-Driven QA Results
+              
+              | Metric | Value |
+              |--------|-------|
+              | Total Tests | ${total} |
+              | ✅ Passed | ${passed} |
+              | ❌ Failed | ${failed} |
+              | 💥 Errors | ${errors} |
+              | Pass Rate | ${passRate}% |
+              ${analysis}`;
+              
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+            } catch (err) {
+              console.log('Could not post comment:', err.message);
+            }
+
+      - name: Stop API
+        if: always()
+        run: |
+          if [ -f api.pid ]; then kill $(cat api.pid) || true; fi
+
+      - name: Fail job if tests failed
+        if: steps.run-tests.outcome == 'failure'
+        run: exit 1
